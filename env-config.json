@@ -1,0 +1,5 @@
+{
+  "id": "441c3b3b-2c55-40ae-a2f9-c4167fcac5a1",
+  "name": "envoix-server",
+  "env_location": "./.env"
+}
