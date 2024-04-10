@@ -10,6 +10,7 @@ const { accessEnvSchema } = require("../schemas/accessEnv");
 const EncryptionService = require("../utils/encryption");
 const accessGaurd = require("../middlewares/accessGaurd");
 const permissionRouter = require("./permissionRouter");
+const { getRow } = require("../utils/utilFuncs");
 const encFactory = new EncryptionService();
 
 const envRouter = Router();
@@ -85,13 +86,10 @@ envRouter.post(
     try {
       const { password, oneTimePassword } = req.body;
 
-      const env = await db.pgDataSource
-        .getRepository("envs")
-        .findOneBy({ env_id: req.params.env_id });
+      const env = await getRow("envs", { env_id: req.params.env_id });
 
-      if (!env) {
+      if (!env)
         return res.json({ status: false, msg: "Environment not found" });
-      }
 
       let mek;
 
@@ -137,9 +135,7 @@ envRouter.post(
     try {
       const { env_data, password } = req.body;
 
-      const env = await db.pgDataSource
-        .getRepository("envs")
-        .findOneBy({ env_id: req.params.env_id });
+      const env = await getRow("envs", { env_id: req.params.env_id });
       if (!env) {
         return res.json({ status: false, msg: "Environment not found" });
       }
@@ -162,9 +158,10 @@ envRouter.post(
 
 envRouter.get("/:env_id/delete", accessGaurd(), async (req, res, next) => {
   try {
-    const env = await db.pgDataSource
-      .getRepository("envs")
-      .findOneBy({ env_id: req.params.env_id, owner: req.user.uid });
+    const env = await getRow("envs", {
+      env_id: req.params.env_id,
+      owner: req.user.uid,
+    });
     if (!env) {
       return res.json({ status: false, msg: "Environment not found" });
     }

@@ -6,6 +6,7 @@ const db = require("../datasource/pg");
 const { permissionSchema } = require("../schemas/permissionSchema");
 const EncryptionService = require("../utils/encryption");
 const accessGaurd = require("../middlewares/accessGaurd");
+const { getRow } = require("../utils/utilFuncs");
 const encFactory = new EncryptionService();
 
 const permissionRouter = Router();
@@ -18,26 +19,20 @@ permissionRouter.post(
     try {
       const { user_email, permission, password, otp } = req.body;
 
-      const user = await db.pgDataSource
-        .getRepository("users")
-        .findOneBy({ email: user_email });
+      const user = await getRow("User", { email: user_email });
+      if (!user) return res.json({ status: false, msg: "User not found" });
 
-      if (!user) {
-        return res.json({ status: false, msg: "User not found" });
-      }
-
-      const env = await db.pgDataSource
-        .getRepository("envs")
-        .findOneBy({ env_id: req.params.env_id });
-      if (!env) {
+      const env = await getRow("envs", { env_id: req.params.env_id });
+      if (!env)
         return res.json({ status: false, msg: "Environment not found" });
-      }
-      const oldPerms = await db.pgDataSource
-        .getRepository("envPermissions")
-        .findOneBy({ env_id: req.params.env_id, user_email });
-      if (oldPerms) {
+
+      const prev_perms = await getRow("envPermissions", {
+        env_id: req.params.env_id,
+        user_email,
+      });
+      if (prev_perms)
         return res.json({ status: false, msg: "Permission already exists" });
-      }
+
       const mek = encFactory.decrypt(
         req.permissions.kek,
         password,
@@ -65,18 +60,17 @@ permissionRouter.post(
   async (req, res, next) => {
     try {
       const { user_email, permission } = req.body;
-      const env = await db.pgDataSource
-        .getRepository("envs")
-        .findOneBy({ env_id: req.params.env_id });
-      if (!env) {
+      const env = await getRow("envs", { env_id: req.params.env_id });
+      if (!env)
         return res.json({ status: false, msg: "Environment not found" });
-      }
-      const permissions = await db.pgDataSource
-        .getRepository("envPermissions")
-        .findOneBy({ env_id: req.params.env_id, user_email });
-      if (!permissions) {
+
+      const prev_perms = await getRow("envPermissions", {
+        env_id: req.params.env_id,
+        user_email,
+      });
+      if (!prev_perms)
         return res.json({ status: false, msg: "Permission not found" });
-      }
+
       await db.pgDataSource
         .getRepository("envPermissions")
         .update({ env_id: req.params.env_id, user_email }, { permission });
@@ -94,18 +88,18 @@ permissionRouter.post(
   async (req, res, next) => {
     try {
       const { user_email } = req.body;
-      const env = await db.pgDataSource
-        .getRepository("envs")
-        .findOneBy({ env_id: req.params.env_id });
-      if (!env) {
+
+      const env = await getRow("envs", { env_id: req.params.env_id });
+      if (!env)
         return res.json({ status: false, msg: "Environment not found" });
-      }
-      const permissions = await db.pgDataSource
-        .getRepository("envPermissions")
-        .findOneBy({ env_id: req.params.env_id, user_email });
-      if (!permissions) {
+
+      const prev_perms = await getRow("envPermissions", {
+        env_id: req.params.env_id,
+        user_email,
+      });
+      if (!prev_perms)
         return res.json({ status: false, msg: "Permission not found" });
-      }
+
       await db.pgDataSource
         .getRepository("envPermissions")
         .delete({ env_id: req.params.env_id, user_email });

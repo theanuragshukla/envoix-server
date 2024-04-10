@@ -1,4 +1,5 @@
 const { EntitySchema } = require("typeorm");
+const { permissions } = require("../constants.js");
 
 const envPermissions = new EntitySchema({
   name: "envPermissions",
@@ -17,7 +18,7 @@ const envPermissions = new EntitySchema({
     },
     permission: {
       type: "enum",
-      enum: ["push", "pull", "admin", "add_user", "remove_user"],
+      enum: permissions,
       array: true,
     },
     kek: {
