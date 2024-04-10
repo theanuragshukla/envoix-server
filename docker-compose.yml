@@ -8,25 +8,25 @@ services:
       - postgres
     build:
       args:
-        PORT:8000
-        DB_NAME:envoix
-        DB_HOST:postgres
-        DB_PORT:5432
-        DB_USER:anurag
-        DB_PASS:asdf1234
-        JWT_SECRET:thisissecret
+        PORT: 8000
+        POSTGRES_HOST: postgres
+        POSTGRES_PORT: 5432
+        POSTGRES_USER: envoix
+        POSTGRES_PASSWORD: asdf1234
+        POSTGRES_DB: envoix
+        JWT_SECRET: secret
       dockerfile: Dockerfile
       context: .
-      ports:
-        - 5000:8000
+    ports:
+      - 9876:8000
 
-    postgres:
-      image: postgres:14-alpine
-      volumes:
-        - ~/apps/postgres:/var/lib/postgresql/data
-      environment:
-        - POSTGRES_PASSWORD=asdf1234
-        - POSTGRES_USER=anurag
-        - POSTGRES_DB=envoix
+  postgres:
+    image: postgres:14-alpine
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: asdf1234
+      POSTGRES_USER: envoix
+      POSTGRES_DB: envoix
 
 
