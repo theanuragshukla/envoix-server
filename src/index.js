@@ -7,6 +7,7 @@ const db = require("./datasource/pg");
 const authRouter = require("./routes/authRoutes");
 const authMiddleware = require("./middlewares/authMiddleware");
 const envRouter = require("./routes/envRouter");
+const swagger = require('./swagger')
 
 const port = process.env.PORT || 8000;
 
@@ -26,9 +27,12 @@ app.get("/", (_, res) => {
   res.json({ status: true, msg: "Hello World!" });
 });
 
+swagger(app)
+
 app.use("/auth", authRouter);
 app.use(authMiddleware);
 app.use("/envs", envRouter);
+
 
 app.use((err, _, res, __) => {
   console.error(err);

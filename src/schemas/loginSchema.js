@@ -1,5 +1,6 @@
 const { body } = require("express-validator");
 
+
 const loginSchema = [
   body("email").isEmail().withMessage("Incorrect email"),
   body("password")

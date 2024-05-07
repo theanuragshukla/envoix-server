@@ -1,6 +1,6 @@
 FROM alpine
 
-RUN apk add nodejs npm bash curl
+RUN apk add nodejs npm
 
 ARG JWT_SECRET
 ARG POSTGRES_USER

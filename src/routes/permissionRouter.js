@@ -12,7 +12,7 @@ const encFactory = new EncryptionService();
 const permissionRouter = Router();
 
 permissionRouter.post(
-  "/:env_id/permissions/add",
+  "/:env_id/",
   validate(permissionSchema),
   accessGaurd(["add_user"]),
   async (req, res, next) => {
@@ -53,8 +53,8 @@ permissionRouter.post(
   }
 );
 
-permissionRouter.post(
-  "/:env_id/permissions/update",
+permissionRouter.put(
+  "/:env_id",
   validate(permissionSchema),
   accessGaurd(["update_user"]),
   async (req, res, next) => {
@@ -81,8 +81,8 @@ permissionRouter.post(
   }
 );
 
-permissionRouter.post(
-  "/:env_id/permissions/remove",
+permissionRouter.delete(
+  "/:env_id",
   body("user_email").isEmail().withMessage("Invalid email"),
   accessGaurd(["remove_user"]),
   async (req, res, next) => {
@@ -110,34 +110,30 @@ permissionRouter.post(
   }
 );
 
-permissionRouter.get(
-  "/:env_id/permissions",
-  accessGaurd(),
-  async (req, res, next) => {
-    try {
-      const env = await db.pgDataSource
-        .getRepository("envs")
-        .findOneBy({ env_id: req.params.env_id, owner: req.user.uid });
+permissionRouter.get("/:env_id", accessGaurd(), async (req, res, next) => {
+  try {
+    const env = await db.pgDataSource
+      .getRepository("envs")
+      .findOneBy({ env_id: req.params.env_id, owner: req.user.uid });
 
-      if (!env) {
-        return res.json({ status: false, msg: "Permission denied" });
-      }
-
-      const permissions = await db.pgDataSource
-        .getRepository("envPermissions")
-        .findBy({ env_id: req.params.env_id });
-      res.json({
-        status: true,
-        msg: "Permissions",
-        data: permissions.map((obj) => ({
-          user_email: obj.user_email,
-          permission: obj.permission,
-        })),
-      });
-    } catch (error) {
-      next(error);
+    if (!env) {
+      return res.json({ status: false, msg: "Permission denied" });
     }
+
+    const permissions = await db.pgDataSource
+      .getRepository("envPermissions")
+      .findBy({ env_id: req.params.env_id });
+    res.json({
+      status: true,
+      msg: "Permissions",
+      data: permissions.map((obj) => ({
+        user_email: obj.user_email,
+        permission: obj.permission,
+      })),
+    });
+  } catch (error) {
+    next(error);
   }
-);
+});
 
 module.exports = permissionRouter;

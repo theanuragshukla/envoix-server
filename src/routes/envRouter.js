@@ -15,7 +15,7 @@ const encFactory = new EncryptionService();
 
 const envRouter = Router();
 
-envRouter.get("/all", async (req, res, next) => {
+envRouter.get("/", async (req, res, next) => {
   try {
     const envs = await db.pgDataSource
       .getRepository("envs")
@@ -26,7 +26,7 @@ envRouter.get("/all", async (req, res, next) => {
   }
 });
 
-envRouter.post("/add", validate(addEnvSchema), async (req, res, next) => {
+envRouter.post("/", validate(addEnvSchema), async (req, res, next) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -127,8 +127,8 @@ envRouter.post(
     }
   }
 );
-envRouter.post(
-  "/:env_id/update",
+envRouter.put(
+  "/:env_id",
   validate(addEnvSchema),
   accessGaurd(["push"]),
   async (req, res, next) => {
@@ -156,7 +156,7 @@ envRouter.post(
   }
 );
 
-envRouter.get("/:env_id/delete", accessGaurd(), async (req, res, next) => {
+envRouter.delete("/:env_id", accessGaurd(), async (req, res, next) => {
   try {
     const env = await getRow("envs", {
       env_id: req.params.env_id,
@@ -174,6 +174,6 @@ envRouter.get("/:env_id/delete", accessGaurd(), async (req, res, next) => {
   }
 });
 
-envRouter.use(permissionRouter);
+envRouter.use('/permissions', permissionRouter);
 
 module.exports = envRouter;

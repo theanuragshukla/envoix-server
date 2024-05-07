@@ -45,6 +45,7 @@ authRouter.post("/signup", validate(addUserSchema), async (req, res, next) => {
   }
 });
 
+
 authRouter.post("/login", validate(loginSchema), async (req, res, next) => {
   try {
     const errors = validationResult(req);
