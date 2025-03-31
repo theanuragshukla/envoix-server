@@ -1,5 +1,13 @@
 name: Generate clients
-on: push
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release'
+        required: true
 jobs:
   generate-clients:
     runs-on: ubuntu-latest
@@ -29,17 +37,27 @@ jobs:
       with:
         generator: typescript-fetch
 
-    - name: Upload generated client as artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: typescript-fetch-client
-        path: typescript-fetch-client/
+    - name: Create a zip of the generated client
+      run: zip -r typescript-fetch-client.zip typescript-fetch-client/
 
-    - name: Commit new client
-      run: |
-        git config --global user.name 'Anurag Shukla'
-        git config --global user.email 'tachyonanurag@gmail.com'
-        git add typescript-fetch-client/
-        git commit -am "Update TypeScript client"
-        git push
+    - name: Create GitHub Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref_name }}
+        release_name: "TypeScript Client ${{ github.ref_name }}"
+        draft: false
+        prerelease: false
+
+    - name: Upload Client to Release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./typescript-fetch-client.zip
+        asset_name: typescript-fetch-client.zip
+        asset_content_type: application/zip
 
