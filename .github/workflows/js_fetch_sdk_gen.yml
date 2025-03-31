@@ -35,7 +35,7 @@ jobs:
     - name: Generate new client
       uses: openapi-generators/openapitools-generator-action@v1
       with:
-        generator: javascript-fetch
+        generator: javascript
 
     - name: Create a zip of the generated client
       run: zip -r javascript-fetch-client.zip javascript-fetch-client/
