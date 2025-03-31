@@ -1,0 +1,62 @@
+name: Generate clients
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release'
+        required: true
+jobs:
+  generate-clients:
+    runs-on: ubuntu-latest
+    name: Generate JavaScript Client
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: 18
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Start server in background
+      run: npm start &
+
+    - name: Generate OpenAPI document
+      run: curl localhost:8000/docs-json > openapi.json
+
+    - name: Cleanup old client
+      run: rm -rf javascript-fetch-client/
+
+    - name: Generate new client
+      uses: openapi-generators/openapitools-generator-action@v1
+      with:
+        generator: javascript-fetch
+
+    - name: Create a zip of the generated client
+      run: zip -r javascript-fetch-client.zip javascript-fetch-client/
+
+    - name: Create GitHub Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref_name }}
+        release_name: "JavaScript Client ${{ github.ref_name }}"
+        draft: false
+        prerelease: false
+
+    - name: Upload Client to Release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./javascript-fetch-client.zip
+        asset_name: javascript-fetch-client.zip
+        asset_content_type: application/zip
