@@ -1,4 +1,4 @@
-name: Generate clients
+name: Generate ts-fetch clients
 on:
   push:
     tags:
