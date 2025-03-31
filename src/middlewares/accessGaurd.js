@@ -1,5 +1,6 @@
 function accessGaurd(roles = ["admin"]) {
   return (req, res, next) => {
+    console.log(">>>", req.permissions)
     if (!!req.permissions) {
       if (typeof req.permissions?.permission !== "object")
         return res.json({ status: false, msg: "Permission denied" });

@@ -1,3 +1,11 @@
+/**
+ * @swagger
+ * tags:
+ *   name: Permissions
+ *   description: Environment permissions management
+ */
+
+
 const Router = require("express").Router;
 const { body } = require("express-validator");
 
@@ -9,10 +17,61 @@ const accessGaurd = require("../middlewares/accessGaurd");
 const { getRow } = require("../utils/utilFuncs");
 const encFactory = new EncryptionService();
 
-const permissionRouter = Router();
+const permissionRouter = Router({mergeParams: true});
+
+
+/**
+ * @swagger
+ * /envs/{env_id}/permissions/add_user:
+ *   post:
+ *     summary: Add user to environment
+ *     tags: [Permissions]
+ *     security:
+ *       - xAuthToken: []
+ *     parameters:
+ *       - in: path
+ *         name: env_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Environment ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - user_email
+ *               - permission
+ *               - password
+ *               - otp
+ *             properties:
+ *               user_email:
+ *                 type: string
+ *                 format: email
+ *               permission:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   enum: [pull, push, add_user, update_user, remove_user, admin]
+ *               password:
+ *                 type: string
+ *                 format: password
+ *               otp:
+ *                 type: string
+ *                 description: One-time password for the new user
+ *     responses:
+ *       200:
+ *         description: Permission added successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/APIResponse'
+ */
 
 permissionRouter.post(
-  "/:env_id/",
+  "/add_user",
   validate(permissionSchema),
   accessGaurd(["add_user"]),
   async (req, res, next) => {
@@ -53,8 +112,55 @@ permissionRouter.post(
   }
 );
 
+/**
+ * @swagger
+ * /envs/{env_id}/permissions/update_user:
+ *   put:
+ *     summary: Update user permissions
+ *     tags: [Permissions]
+ *     security:
+ *       - xAuthToken: []
+ *     parameters:
+ *       - in: path
+ *         name: env_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Environment ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - user_email
+ *               - permission
+ *             properties:
+ *               user_email:
+ *                 type: string
+ *                 format: email
+ *               permission:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   enum: [pull, push, add_user, update_user, remove_user, admin]
+ *     responses:
+ *       200:
+ *         description: Permission updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                 msg:
+ *                   type: string
+ */
+
 permissionRouter.put(
-  "/:env_id",
+  "/update_user",
   validate(permissionSchema),
   accessGaurd(["update_user"]),
   async (req, res, next) => {
@@ -81,8 +187,50 @@ permissionRouter.put(
   }
 );
 
+
+/**
+ * @swagger
+ * /envs/{env_id}/permissions/remove_user:
+ *   delete:
+ *     summary: Remove user from environment
+ *     tags: [Permissions]
+ *     security:
+ *       - xAuthToken: []
+ *     parameters:
+ *       - in: path
+ *         name: env_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Environment ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - user_email
+ *             properties:
+ *               user_email:
+ *                 type: string
+ *                 format: email
+ *     responses:
+ *       200:
+ *         description: Permission removed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                 msg:
+ *                   type: string
+ */
+
 permissionRouter.delete(
-  "/:env_id",
+  "/remove_user",
   body("user_email").isEmail().withMessage("Invalid email"),
   accessGaurd(["remove_user"]),
   async (req, res, next) => {
@@ -110,11 +258,49 @@ permissionRouter.delete(
   }
 );
 
-permissionRouter.get("/:env_id", accessGaurd(), async (req, res, next) => {
+
+/**
+ * @swagger
+ * /envs/{env_id}/permissions/all:
+ *   get:
+ *     summary: Get all permissions for an environment
+ *     tags: [Permissions]
+ *     security:
+ *       - xAuthToken: []
+ *     parameters:
+ *       - in: path
+ *         name: env_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Environment ID
+ *     responses:
+ *       200:
+ *         description: List of permissions
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                 msg:
+ *                   type: string
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Permission'
+ */
+
+permissionRouter.get("/all", accessGaurd(), async (req, res, next) => {
   try {
+    const { env_id } = req.params;
+    if(!env_id || !req.user.uid) {
+      return res.json({ status: false, msg: "Environment not found" });
+    }
     const env = await db.pgDataSource
       .getRepository("envs")
-      .findOneBy({ env_id: req.params.env_id, owner: req.user.uid });
+      .findOneBy({ env_id: env_id  , owner: req.user.uid });
 
     if (!env) {
       return res.json({ status: false, msg: "Permission denied" });
@@ -122,7 +308,7 @@ permissionRouter.get("/:env_id", accessGaurd(), async (req, res, next) => {
 
     const permissions = await db.pgDataSource
       .getRepository("envPermissions")
-      .findBy({ env_id: req.params.env_id });
+      .findBy({ env_id });
     res.json({
       status: true,
       msg: "Permissions",

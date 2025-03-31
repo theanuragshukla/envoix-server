@@ -1,9 +1,14 @@
-const db = require("../datasource/pg");
+const { getRow } = require("../utils/utilFuncs");
 
 const permissionMiddleware = async (req, res, next) => {
-  const permissions = await db.pgDataSource
-    .getRepository("envPermissions")
-    .findOneBy({ env_id: req.params.env_id, user_email: req.user.email });
+  const { env_id } = req.params;
+  if(!env_id) {
+      return res.json({ status: false, msg: "Environment not found" });
+  }
+  const permissions = await getRow("envPermissions", {
+    env_id: req.params.env_id,
+    user_email: req.user.email,
+  });
   req.permissions = permissions;
   if (!permissions) {
     return res.json({ status: false, msg: "Permission denied" });

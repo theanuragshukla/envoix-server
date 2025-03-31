@@ -36,7 +36,7 @@ app.use("/envs", envRouter);
 
 app.use((err, _, res, __) => {
   console.error(err);
-  res.status(500).json({ status: false, msg: "Internal server error" });
+  res.status(500).json({ status: false, msg: "Something went wrong" });
 });
 
 app.use((_, res) => {
