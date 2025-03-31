@@ -1,0 +1,45 @@
+name: Generate clients
+on: push
+jobs:
+  generate-clients:
+    runs-on: ubuntu-latest
+    name: Generate TypeScript Client
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: 18
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Start server in background
+      run: npm start &
+
+    - name: Generate OpenAPI document
+      run: curl localhost:8000/docs-json > openapi.json
+
+    - name: Cleanup old client
+      run: rm -rf typescript-fetch-client/
+
+    - name: Generate new client
+      uses: openapi-generators/openapitools-generator-action@v1
+      with:
+        generator: typescript-fetch
+
+    - name: Upload generated client as artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: typescript-fetch-client
+        path: typescript-fetch-client/
+
+    - name: Commit new client
+      run: |
+        git config --global user.name 'Anurag Shukla'
+        git config --global user.email 'tachyonanurag@gmail.com'
+        git add typescript-fetch-client/
+        git commit -am "Update TypeScript client"
+        git push
+
