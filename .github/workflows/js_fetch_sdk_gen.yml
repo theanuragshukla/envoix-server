@@ -1,4 +1,4 @@
-name: Generate clients
+name: Generate JS-fetch clients
 on:
   push:
     tags:
