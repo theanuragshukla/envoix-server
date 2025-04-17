@@ -2,7 +2,7 @@ name: Generate Client SDKs
 on:
   push:
     tags:
-      - "[0-9]+.[0-9]+.[0-9]+"
+      - "[0-9]+.[0-9]+.[0-9]+" # Trigger on version tags
   workflow_dispatch:
     inputs:
       tag:
@@ -60,7 +60,7 @@ jobs:
       uses: actions/github-script@v6
       with:
         script: |
-          const tagName = "${{ steps.generate_and_package_sdk.outputs.tag }}";
+          const tagName = "${{ github.ref_name }}";
           const existingReleases = await github.rest.repos.listReleases({
             owner: context.repo.owner,
             repo: context.repo.repo,
