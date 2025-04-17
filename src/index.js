@@ -7,7 +7,7 @@ const db = require("./datasource/pg");
 const authRouter = require("./routes/authRoutes");
 const authMiddleware = require("./middlewares/authMiddleware");
 const envRouter = require("./routes/envRouter");
-const swagger = require('./swagger')
+const swagger = require('./swagger');
 
 const port = process.env.PORT || 8000;
 

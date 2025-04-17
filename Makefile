@@ -27,4 +27,4 @@ release-major: test
 
 publish:
 	git push --set-upstream origin master
-	git push --tags origin HEAD:master
+	git push --tags origin master
