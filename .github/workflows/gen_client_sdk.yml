@@ -2,7 +2,7 @@ name: Generate Client SDKs
 on:
   push:
     tags:
-      - "[0-9]+.[0-9]+.[0-9]+" # Trigger on version tags
+      - "[0-9]+.[0-9]+.[0-9]+"
   workflow_dispatch:
     inputs:
       tag:
@@ -34,7 +34,14 @@ jobs:
       run: |
         declare -a clients=("javascript" "typescript-fetch")
         assets=()
-        tag=${{ github.ref_name }}
+        
+        # Determine the tag to use based on the event
+        if [ -n "${{ github.event.inputs.tag }}" ]; then
+          tag=${{ github.event.inputs.tag }}  # From manual trigger (workflow_dispatch)
+        else
+          tag=${{ github.ref_name }}  # From tag push event
+        fi
+
         for client in "${clients[@]}"; do
           echo "Cleaning up old ${client} client..."
           rm -rf ${client}-fetch-client/
@@ -53,7 +60,7 @@ jobs:
       uses: actions/github-script@v6
       with:
         script: |
-          const tagName = "${{ github.ref_name }}";
+          const tagName = "${{ steps.generate_and_package_sdk.outputs.tag }}";
           const existingReleases = await github.rest.repos.listReleases({
             owner: context.repo.owner,
             repo: context.repo.repo,
