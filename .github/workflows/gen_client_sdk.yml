@@ -1,38 +1,47 @@
-name: Generate Fetch Clients
+name: Generate Client SDKs
 on:
   push:
     tags:
-      - "[0-9]+.[0-9]+.[0-9]+"
+      - "[0-9]+.[0-9]+.[0-9]+" # Trigger on version tags
   workflow_dispatch:
     inputs:
       tag:
         description: 'Tag to release'
         required: true
 jobs:
-  generate-clients:
+  release-sdks:
     runs-on: ubuntu-latest
-    name: Generate Fetch Clients
+    name: Generate and Release Client SDKs
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout Code
+      uses: actions/checkout@v3
 
     - name: Set up Node.js
       uses: actions/setup-node@v3
       with:
         node-version: 18
 
-    - name: Install dependencies
+    - name: Install Dependencies
       run: npm install
 
-    - name: Start server in background
+    - name: Start Server in Background
       run: npm start &
 
-    - name: Generate OpenAPI document
+    - name: Generate OpenAPI Document
       run: curl localhost:8000/docs-json > openapi.json
 
-    - name: Generate and Package Clients
+    - name: Generate and Package SDKs
       run: |
         declare -a clients=("javascript" "typescript-fetch")
         assets=()
+        
+        # Determine the tag to use based on the event
+        if [ -n "${{ github.event.inputs.tag }}" ]; then
+          tag=${{ github.event.inputs.tag }}  # From manual trigger (workflow_dispatch)
+        else
+          tag=${{ github.ref_name }}  # From tag push event
+        fi
+
         for client in "${clients[@]}"; do
           echo "Cleaning up old ${client} client..."
           rm -rf ${client}-fetch-client/
@@ -40,12 +49,34 @@ jobs:
           echo "Generating ${client} client..."
           npx @openapitools/openapi-generator-cli generate -i openapi.json -g ${client} -o ${client}-fetch-client/
           
-          echo "Zipping ${client} client..."
-          zip -r ${client}-client.zip ${client}-fetch-client/
-          
-          assets+=("${client}-client.zip")
+          asset_name="${client}_sdk_${tag}.zip"
+          echo "Packaging ${client} client as ${asset_name}..."
+          zip -r ${asset_name} ${client}-fetch-client/
+          assets+=("${asset_name}")
         done
         echo "${assets[@]}" > assets.txt
+
+    - name: Check and Delete Existing Release
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const tagName = "${{ github.ref_name }}";
+          const existingReleases = await github.rest.repos.listReleases({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+          });
+
+          const existingRelease = existingReleases.data.find(r => r.tag_name === tagName);
+          if (existingRelease) {
+            console.log(`Existing release found for tag ${tagName}, deleting...`);
+            await github.rest.repos.deleteRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: existingRelease.id,
+            });
+          } else {
+            console.log(`No existing release found for tag ${tagName}.`);
+          }
 
     - name: Create GitHub Release
       id: create_release
@@ -54,18 +85,19 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         tag_name: ${{ github.ref_name }}
-        release_name: "Clients Release ${{ github.ref_name }}"
+        release_name: "SDKs Release ${{ github.ref_name }}"
         draft: false
         prerelease: false
 
-    - name: Upload Clients to Release
+    - name: Install GitHub CLI
+      run: sudo apt-get install -y gh
+
+    - name: Upload SDKs as Assets
       run: |
         assets=$(cat assets.txt)
         for asset in $assets; do
           echo "Uploading $asset..."
-          curl -X POST \
-            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Content-Type: application/zip" \
-            --data-binary @"$asset" \
-            "${{ steps.create_release.outputs.upload_url }}?name=$(basename $asset)"
+          gh release upload ${{ github.ref_name }} "$asset" --clobber
         done
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
