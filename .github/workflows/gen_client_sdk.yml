@@ -1,0 +1,71 @@
+name: Generate Fetch Clients
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release'
+        required: true
+jobs:
+  generate-clients:
+    runs-on: ubuntu-latest
+    name: Generate Fetch Clients
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: 18
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Start server in background
+      run: npm start &
+
+    - name: Generate OpenAPI document
+      run: curl localhost:8000/docs-json > openapi.json
+
+    - name: Generate and Package Clients
+      run: |
+        declare -a clients=("javascript" "typescript-fetch")
+        assets=()
+        for client in "${clients[@]}"; do
+          echo "Cleaning up old ${client} client..."
+          rm -rf ${client}-fetch-client/
+          
+          echo "Generating ${client} client..."
+          npx @openapitools/openapi-generator-cli generate -i openapi.json -g ${client} -o ${client}-fetch-client/
+          
+          echo "Zipping ${client} client..."
+          zip -r ${client}-client.zip ${client}-fetch-client/
+          
+          assets+=("${client}-client.zip")
+        done
+        echo "${assets[@]}" > assets.txt
+
+    - name: Create GitHub Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref_name }}
+        release_name: "Clients Release ${{ github.ref_name }}"
+        draft: false
+        prerelease: false
+
+    - name: Upload Clients to Release
+      run: |
+        assets=$(cat assets.txt)
+        for asset in $assets; do
+          echo "Uploading $asset..."
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Content-Type: application/zip" \
+            --data-binary @"$asset" \
+            "${{ steps.create_release.outputs.upload_url }}?name=$(basename $asset)"
+        done
