@@ -1,4 +1,4 @@
-name: Generate Fetch Clients
+name: Generate Client SDKs
 on:
   push:
     tags:
@@ -46,6 +46,26 @@ jobs:
           assets+=("${client}-client.zip")
         done
         echo "${assets[@]}" > assets.txt
+
+    - name: Check and Delete Existing Release
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const releaseTag = "${{ github.ref_name }}";
+          const existingReleases = await github.rest.repos.listReleases({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+          });
+
+          const existingRelease = existingReleases.data.find(r => r.tag_name === releaseTag);
+          if (existingRelease) {
+            await github.rest.repos.deleteRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: existingRelease.id,
+            });
+            console.log(`Deleted existing release for tag: ${releaseTag}`);
+          }
 
     - name: Create GitHub Release
       id: create_release
